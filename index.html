@@ -66,6 +66,69 @@
             max-width: 500px;
         }
 
+        .broadcasts-section {
+            margin-top: 60px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .broadcasts-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .broadcasts-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .broadcast-item {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .broadcast-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .broadcast-link {
+            display: block;
+            padding: 16px 20px;
+            text-decoration: none;
+            color: #2d3748;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+
+        .broadcast-link:hover {
+            color: #667eea;
+        }
+
+        .broadcasts-loading {
+            text-align: center;
+            color: #718096;
+            font-style: italic;
+            padding: 20px;
+        }
+
+        .broadcasts-error {
+            text-align: center;
+            color: #e53e3e;
+            padding: 20px;
+            background: #fed7d7;
+            border-radius: 8px;
+            margin: 12px 0;
+        }
+
         @media (max-width: 600px) {
             .title {
                 font-size: 2.5rem;
@@ -100,6 +163,79 @@
         <div class="form-container">
             <script async data-uid="e823446242" src="https://deal-dispatch.kit.com/e823446242/index.js"></script>
         </div>
+
+        <div class="broadcasts-section">
+            <h2 class="broadcasts-title">Latest Broadcasts</h2>
+            <div class="broadcasts-loading" id="broadcasts-loading">Loading latest broadcasts...</div>
+            <div id="broadcasts-container"></div>
+        </div>
     </div>
+
+    <script>
+        async function fetchBroadcasts() {
+            const loadingElement = document.getElementById('broadcasts-loading');
+            const container = document.getElementById('broadcasts-container');
+            
+            try {
+                // Try to fetch RSS feed through a CORS proxy
+                const response = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://deal-dispatch.kit.com/feed'));
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch broadcasts');
+                }
+                
+                const data = await response.json();
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(data.contents, 'text/xml');
+                
+                // Check for parsing errors
+                const parseError = xmlDoc.querySelector('parsererror');
+                if (parseError) {
+                    throw new Error('Failed to parse RSS feed');
+                }
+                
+                const items = xmlDoc.querySelectorAll('item');
+                
+                if (items.length === 0) {
+                    container.innerHTML = '<div class="broadcasts-error">No broadcasts found.</div>';
+                    loadingElement.style.display = 'none';
+                    return;
+                }
+                
+                const broadcastsList = document.createElement('ul');
+                broadcastsList.className = 'broadcasts-list';
+                
+                // Display latest 5 broadcasts
+                Array.from(items).slice(0, 5).forEach(item => {
+                    const title = item.querySelector('title')?.textContent || 'Untitled';
+                    const link = item.querySelector('link')?.textContent || '#';
+                    
+                    const listItem = document.createElement('li');
+                    listItem.className = 'broadcast-item';
+                    
+                    const linkElement = document.createElement('a');
+                    linkElement.href = link;
+                    linkElement.className = 'broadcast-link';
+                    linkElement.textContent = title;
+                    linkElement.target = '_blank';
+                    linkElement.rel = 'noopener noreferrer';
+                    
+                    listItem.appendChild(linkElement);
+                    broadcastsList.appendChild(listItem);
+                });
+                
+                container.appendChild(broadcastsList);
+                loadingElement.style.display = 'none';
+                
+            } catch (error) {
+                console.error('Error fetching broadcasts:', error);
+                container.innerHTML = '<div class="broadcasts-error">Unable to load broadcasts at this time.</div>';
+                loadingElement.style.display = 'none';
+            }
+        }
+        
+        // Load broadcasts when page loads
+        document.addEventListener('DOMContentLoaded', fetchBroadcasts);
+    </script>
 </body>
 </html>
