@@ -81,72 +81,29 @@
             text-align: center;
         }
 
-        .broadcasts-list {
-            list-style: none;
-            padding: 0;
-        }
-
-        .broadcast-item {
-            background: #f7fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            margin-bottom: 12px;
-            transition: all 0.2s ease;
-        }
-
-        .broadcast-item:hover {
-            border-color: #667eea;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
-            transform: translateY(-1px);
-        }
-
-        .broadcast-link {
-            display: block;
-            padding: 16px 20px;
+        .browse-link {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 16px 32px;
             text-decoration: none;
-            color: #2d3748;
-            font-weight: 500;
-            line-height: 1.5;
-        }
-
-        .broadcast-link:hover {
-            color: #667eea;
-        }
-
-        .broadcast-date {
-            color: #718096;
-            font-size: 0.875rem;
-            font-weight: 400;
-            margin-top: 4px;
-        }
-
-        .broadcasts-loading {
-            text-align: center;
-            color: #718096;
-            font-style: italic;
-            padding: 20px;
-        }
-
-        .broadcasts-error {
-            text-align: center;
-            color: #e53e3e;
-            padding: 20px;
-            background: #fed7d7;
             border-radius: 8px;
-            margin: 12px 0;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
         }
 
-        .debug-info {
+        .browse-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .note {
             margin-top: 20px;
-            padding: 16px;
-            background: #f7fafc;
-            border-radius: 8px;
-            text-align: left;
-            font-family: monospace;
-            font-size: 12px;
-            color: #4a5568;
-            white-space: pre-wrap;
-            display: none;
+            color: #718096;
+            font-size: 0.95rem;
+            font-style: italic;
         }
 
         @media (max-width: 600px) {
@@ -186,165 +143,11 @@
 
         <div class="broadcasts-section">
             <h2 class="broadcasts-title">Latest Broadcasts</h2>
-            <div class="broadcasts-loading" id="broadcasts-loading">Loading latest broadcasts...</div>
-            <div id="broadcasts-container"></div>
-            <div id="debug-info" class="debug-info"></div>
+            <a href="https://deal-dispatch.kit.com" class="browse-link" target="_blank" rel="noopener noreferrer">
+                Browse Past Issues →
+            </a>
+            <p class="note">View all our previous newsletters and market insights</p>
         </div>
     </div>
-
-    <script>
-        async function fetchBroadcasts() {
-            const loadingElement = document.getElementById('broadcasts-loading');
-            const container = document.getElementById('broadcasts-container');
-            const debugInfo = document.getElementById('debug-info');
-            
-            // Common RSS feed URLs for Kit
-            const possibleRssUrls = [
-                'https://deal-dispatch.kit.com/feed',
-                'https://deal-dispatch.kit.com/rss',
-                'https://deal-dispatch.kit.com/feed.xml',
-                'https://api.kit.com/v4/publications/deal-dispatch/feed'
-            ];
-            
-            // CORS proxies to try
-            const corsProxies = [
-                'https://api.allorigins.win/get?url=',
-                'https://corsproxy.io/?',
-                'https://cors-anywhere.herokuapp.com/'
-            ];
-            
-            let debugMessages = [];
-            
-            for (const rssUrl of possibleRssUrls) {
-                debugMessages.push(`Trying RSS URL: ${rssUrl}`);
-                
-                for (const proxy of corsProxies) {
-                    try {
-                        debugMessages.push(`  Using proxy: ${proxy}`);
-                        
-                        let fetchUrl;
-                        let response;
-                        
-                        if (proxy.includes('allorigins.win')) {
-                            fetchUrl = proxy + encodeURIComponent(rssUrl);
-                            response = await fetch(fetchUrl, {
-                                headers: {
-                                    'Accept': 'application/json'
-                                }
-                            });
-                            
-                            if (!response.ok) {
-                                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                            }
-                            
-                            const data = await response.json();
-                            if (!data.contents) {
-                                throw new Error('No contents in response');
-                            }
-                            
-                            const parser = new DOMParser();
-                            const xmlDoc = parser.parseFromString(data.contents, 'text/xml');
-                            
-                            const parseError = xmlDoc.querySelector('parsererror');
-                            if (parseError) {
-                                throw new Error('XML parsing error: ' + parseError.textContent);
-                            }
-                            
-                            const items = xmlDoc.querySelectorAll('item');
-                            debugMessages.push(`  Found ${items.length} items in RSS feed`);
-                            
-                            if (items.length > 0) {
-                                displayBroadcasts(items, container);
-                                loadingElement.style.display = 'none';
-                                debugMessages.push('✅ Successfully loaded broadcasts!');
-                                debugInfo.textContent = debugMessages.join('\n');
-                                return;
-                            }
-                            
-                        } else {
-                            fetchUrl = proxy + rssUrl;
-                            response = await fetch(fetchUrl);
-                            
-                            if (!response.ok) {
-                                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                            }
-                            
-                            const xmlText = await response.text();
-                            const parser = new DOMParser();
-                            const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-                            
-                            const parseError = xmlDoc.querySelector('parsererror');
-                            if (parseError) {
-                                throw new Error('XML parsing error');
-                            }
-                            
-                            const items = xmlDoc.querySelectorAll('item');
-                            debugMessages.push(`  Found ${items.length} items in RSS feed`);
-                            
-                            if (items.length > 0) {
-                                displayBroadcasts(items, container);
-                                loadingElement.style.display = 'none';
-                                debugMessages.push('✅ Successfully loaded broadcasts!');
-                                debugInfo.textContent = debugMessages.join('\n');
-                                return;
-                            }
-                        }
-                        
-                    } catch (error) {
-                        debugMessages.push(`  ❌ Error: ${error.message}`);
-                        console.error(`Error with ${rssUrl} via ${proxy}:`, error);
-                    }
-                }
-            }
-            
-            // If we get here, all attempts failed
-            debugInfo.textContent = debugMessages.join('\n');
-            debugInfo.style.display = 'block';
-            container.innerHTML = '<div class="broadcasts-error">Unable to load broadcasts. Check debug info below or try refreshing.</div>';
-            loadingElement.style.display = 'none';
-        }
-        
-        function displayBroadcasts(items, container) {
-            const broadcastsList = document.createElement('ul');
-            broadcastsList.className = 'broadcasts-list';
-            
-            // Display latest 5 broadcasts
-            Array.from(items).slice(0, 5).forEach(item => {
-                const title = item.querySelector('title')?.textContent || 'Untitled';
-                const link = item.querySelector('link')?.textContent || item.querySelector('guid')?.textContent || '#';
-                const pubDate = item.querySelector('pubDate')?.textContent;
-                
-                const listItem = document.createElement('li');
-                listItem.className = 'broadcast-item';
-                
-                const linkElement = document.createElement('a');
-                linkElement.href = link;
-                linkElement.className = 'broadcast-link';
-                linkElement.target = '_blank';
-                linkElement.rel = 'noopener noreferrer';
-                
-                let content = title;
-                if (pubDate) {
-                    const date = new Date(pubDate);
-                    const formattedDate = date.toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                    });
-                    content += `<div class="broadcast-date">${formattedDate}</div>`;
-                }
-                
-                linkElement.innerHTML = content;
-                
-                listItem.appendChild(linkElement);
-                broadcastsList.appendChild(listItem);
-            });
-            
-            container.appendChild(broadcastsList);
-        }
-        
-        // Load broadcasts when page loads
-        document.addEventListener('DOMContentLoaded', fetchBroadcasts);
-    </script>
 </body>
 </html>
